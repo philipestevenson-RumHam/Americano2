@@ -1012,11 +1012,16 @@ h1, h2, h3, .display { font-family: 'Bebas Neue', cursive; letter-spacing: 0.05e
 
 <script>
 // ===================== DATA =====================
-const _DEFAULT_NAMES = ['RumHam','667','LemonHeads','QuiztianoKnowitAll','Jencanto',
-               "Em's a Power Ranger","I Don't Know Any Stevie Wonder",'Smarty Pints',
-               'The Walkers','Suzie Q','Boom Not Cheating Mum',
-               "It's a Trivial Travesty",'Lemurs In Lincolnshire',
-               'The Buckshaw Beast','Titanic Swim Team','KitKat'];
+const _DEFAULT_NAMES = [
+  'RumHam','667 (Sulky)','LemonHeads','QuiztianoKnowitAll','Jencanto',
+  "Em's a Power Ranger","I Don't Know Any Stevie Wonder",'Smarty Pints',
+  'The Walkers','Suzie Q','Boom Not Cheating Mum',
+  "It's a Trivial Travesty",'Lemurs In Lincolnshire',
+  'The Buckshaw Beast','Titanic Swim Team','KitKat',
+  'Biscuit Overlords','The Quizzard Sleeves','Marmalade Mayhem',
+  'Sofa Goblins','The Lancashire Llamas','Trivia Trousers',
+  'Banana Panic','The Sneaky Ferrets'
+];
 let numPlayers = 16; // always a multiple of 4; numRounds = numPlayers-1; numCourts = numPlayers/4
 let players = Array.from({length:numPlayers}, (_,i) => _DEFAULT_NAMES[i] || '');
 let ghosts = Array(numPlayers).fill(false);
