@@ -408,7 +408,7 @@ function loadAndRender(){
     if(!document.querySelector('.panel.active')) document.getElementById('p1').classList.add('active');
 
     const rawNP = localStorage.getItem('rr_num_players');
-    numPlayers = rawNP ? (parseInt(rawNP)||16) : Math.max(JSON.parse(rawPlayers).length, 16);
+    numPlayers = rawNP ? (parseInt(rawNP)||16) : Math.max(JSON.parse(rawPlayers).length, 8);
     const numRounds = numPlayers - 1;
     const numCourts = numPlayers / 4;
     // (numPlayers is updated above as module-level)
