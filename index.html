@@ -3087,7 +3087,7 @@ function ssImport(input) {
       for(let i=1;i<rows.length;i++){
         const row=rows[i];
         if(!row||!row[0]) continue;
-        const teamId = String(row[0]).trim();  // '1'-'16' or 'E1'-'E4'
+        const teamId = String(row[0]).trim();  // '1'-'N' or 'E1'-'E4'
         const name   = row[1]!==undefined ? String(row[1]).trim() : '';
         const pairsWith = row[2]!==undefined ? String(row[2]).trim() : '';
 
