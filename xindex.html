@@ -234,24 +234,6 @@ h1, h2, h3, .display { font-family: 'Bebas Neue', cursive; letter-spacing: 0.05e
 .round-btn.active { background: var(--accent); border-color: var(--accent); color: var(--navy); }
 .round-btn.complete { background: var(--win); border-color: var(--win); color: #fff; }
 
-.lb-toggle-btn {
-  height: 40px;
-  border-radius: 20px;
-  border: 2px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 600;
-  font-size: 0.8rem;
-  padding: 0 1rem;
-  margin-left: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex; align-items: center; gap: 0.4rem;
-}
-.lb-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
-.lb-toggle-btn.active { background: var(--grad); border-color: transparent; color: #fff; }
-
 /* COURTS */
 .courts-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 1.5rem; }
 
@@ -778,10 +760,7 @@ h1, h2, h3, .display { font-family: 'Bebas Neue', cursive; letter-spacing: 0.05e
 
   <div class="setup-grid">
     <div class="panel">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem">
-        <h2 style="margin:0">Player Names</h2>
-        <button class="btn btn-secondary btn-sm" onclick="sortPlayerNamesAZ()" title="Sort player names alphabetically (Ghost slot stays put)">A→Z Sort</button>
-      </div>
+      <h2>Player Names</h2>
       <div class="player-grid" id="player-inputs"></div>
 
       <h2 style="margin-top:1.5rem">Extra Players</h2>
@@ -840,7 +819,7 @@ h1, h2, h3, .display { font-family: 'Bebas Neue', cursive; letter-spacing: 0.05e
 
       <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
         <label style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600;display:block;margin-bottom:0.4rem">Player Images (OBS Overlay)</label>
-        <p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.6rem;line-height:1.5">Name each image file after the player (e.g. <code style="background:rgba(255,255,255,0.1);padding:1px 4px;border-radius:3px">John.png</code>). Any size or shape works — each photo is automatically cropped to a square and resized to 300×300px before saving, so all player photos load reliably without hitting browser storage limits.</p>
+        <p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.6rem;line-height:1.5">Name each image file after the player (e.g. <code style="background:rgba(255,255,255,0.1);padding:1px 4px;border-radius:3px">John.png</code>). A square photo will appear beside each name on the OBS screen.</p>
         <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
           <button class="btn btn-secondary btn-sm" onclick="document.getElementById('player-image-input').click()">🖼️ Upload Images</button>
           <span id="player-image-count" style="font-size:0.85rem;color:var(--muted)">No images loaded</span>
@@ -1054,8 +1033,6 @@ let extras = [null, null, null, null];
 let schedule = [];
 let scores = {};
 let currentRound = 0;
-let obsLeaderboardMode = false; // when true, OBS overlay shows the leaderboard instead of courts
-let obsCycleMode = false; // when true, OBS overlay auto-cycles through courts one at a time
 let tournamentGenerated = false;
 let numQuestions = 10;
 let pointsPerQuestion = 1; // multiplier: each correct answer = this many points
@@ -1208,75 +1185,20 @@ function updatePlayer(i, val) {
   saveState();
 }
 
-function sortPlayerNamesAZ() {
-  if (tournamentGenerated) {
-    if (!confirm('The tournament has already been generated. Sorting names now reassigns players to different slot numbers and can scramble fixtures/scores already recorded. Continue anyway?')) return;
-  }
-  const nonGhostIdx = [];
-  for (let i = 0; i < numPlayers; i++) { if (!ghosts[i]) nonGhostIdx.push(i); }
-  const names = nonGhostIdx
-    .map(i => (players[i] || '').trim())
-    .filter(n => n.length > 0)
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-  let ni = 0;
-  nonGhostIdx.forEach(i => { players[i] = ni < names.length ? names[ni++] : ''; });
-  buildPlayerInputs();
-  saveState();
-}
-
-// Target size for stored player photos. They only ever render as small square
-// thumbnails (OBS overlay + leaderboard), so 300×300 JPEGs are plenty sharp
-// while keeping everything comfortably inside localStorage's ~5MB quota —
-// which is why big camera-phone originals were silently failing to save before.
-const PLAYER_IMG_MAX_DIM = 300;
-const PLAYER_IMG_QUALITY = 0.82;
-
-function resizePlayerImage(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        // Crop to a centered square, then scale down to the target size
-        const side = Math.min(img.width, img.height);
-        const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
-        const canvas = document.createElement('canvas');
-        canvas.width = PLAYER_IMG_MAX_DIM;
-        canvas.height = PLAYER_IMG_MAX_DIM;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, sx, sy, side, side, 0, 0, PLAYER_IMG_MAX_DIM, PLAYER_IMG_MAX_DIM);
-        resolve(canvas.toDataURL('image/jpeg', PLAYER_IMG_QUALITY));
-      };
-      img.onerror = () => reject(new Error('Could not read ' + file.name + ' as an image'));
-      img.src = e.target.result;
-    };
-    reader.onerror = () => reject(new Error('Could not read file ' + file.name));
-    reader.readAsDataURL(file);
-  });
-}
-
 function loadPlayerImages(input) {
   const files = Array.from(input.files);
   if (!files.length) return;
   let imgs = {};
   try { imgs = JSON.parse(localStorage.getItem('rr_player_images') || '{}'); } catch(e) {}
-  const countEl = document.getElementById('player-image-count');
-  if (countEl) countEl.textContent = `Processing ${files.length} image${files.length!==1?'s':''}…`;
-  const failed = [];
-  const promises = files.map(file => {
+  const promises = files.map(file => new Promise(resolve => {
     const name = file.name.replace(/\.[^.]+$/, '').trim();
-    return resizePlayerImage(file)
-      .then(dataUrl => { imgs[name] = dataUrl; })
-      .catch(() => { failed.push(file.name); });
-  });
+    const reader = new FileReader();
+    reader.onload = e => { imgs[name] = e.target.result; resolve(); };
+    reader.readAsDataURL(file);
+  }));
   Promise.all(promises).then(() => {
-    try {
-      localStorage.setItem('rr_player_images', JSON.stringify(imgs));
-    } catch(e) {
-      alert('Storage limit reached — not all images could be saved. Try removing a few images and re-uploading.');
-    }
+    localStorage.setItem('rr_player_images', JSON.stringify(imgs));
     updatePlayerImageCount();
-    if (failed.length) alert('Could not process: ' + failed.join(', '));
     input.value = '';
   });
 }
@@ -1516,8 +1438,6 @@ function renderPlayPage() {
     b.onclick = (()=>{const rr=r; return ()=>selectRound(rr);})();
     rb.appendChild(b);
   }
-  rb.appendChild(makeLbToggleBtn());
-  rb.appendChild(makeCycleToggleBtn());
   document.getElementById('play-subtitle').textContent = `Round ${currentRound+1} of ${numPlayers-1}`;
   renderRound(currentRound);
 }
@@ -2884,78 +2804,6 @@ function launchConfetti() {
 // ===================== SCORE SHEET =====================
 let ssRound = 0;
 
-function selectSsRound(r) {
-  ssRound = r;
-  currentRound = r; // keep Play tab & OBS overlay in lockstep with the Score Sheet
-  saveState();
-  renderScoreSheet();
-}
-
-// ===================== OBS LEADERBOARD TOGGLE =====================
-function makeLbToggleBtn() {
-  const btn = document.createElement('button');
-  btn.className = 'lb-toggle-btn' + (obsLeaderboardMode ? ' active' : '');
-  btn.innerHTML = obsLeaderboardMode ? '📊 Leaderboard: ON' : '📊 Show Leaderboard';
-  btn.title = 'Toggle the OBS overlay between the courts view and the live leaderboard';
-  btn.onclick = toggleObsLeaderboard;
-  return btn;
-}
-
-function toggleObsLeaderboard() {
-  obsLeaderboardMode = !obsLeaderboardMode;
-  saveState();
-  if (document.getElementById('page-play').classList.contains('active')) renderPlayPage();
-  if (document.getElementById('page-scoresheet').classList.contains('active')) renderScoreSheet();
-}
-
-// ===================== OBS COURT-CYCLE TOGGLE =====================
-// Mirrors the ▶ Play / ⏹ Stop button on the OBS overlay itself, so you can
-// start/stop the auto-cycle through courts from the main app instead.
-function makeCycleToggleBtn() {
-  const btn = document.createElement('button');
-  btn.className = 'lb-toggle-btn' + (obsCycleMode ? ' active' : '');
-  btn.innerHTML = obsCycleMode ? '⏹ Stop Cycle' : '▶ Play Cycle';
-  btn.title = 'Auto-cycle the OBS overlay through each court, one at a time, every 3 seconds';
-  btn.onclick = toggleObsCycle;
-  return btn;
-}
-
-function toggleObsCycle() {
-  obsCycleMode = !obsCycleMode;
-  saveState();
-  if (document.getElementById('page-play').classList.contains('active')) renderPlayPage();
-  if (document.getElementById('page-scoresheet').classList.contains('active')) renderScoreSheet();
-}
-
-// Keep Play / Score Sheet / OBS in sync live if the round, leaderboard toggle,
-// or cycle toggle changes in another browser tab (e.g. the OBS overlay window).
-window.addEventListener('storage', function(e) {
-  if (!tournamentGenerated) return;
-  if (e.key === 'rr_round') {
-    const nr = parseInt(e.newValue) || 0;
-    if (nr !== currentRound || nr !== ssRound) {
-      currentRound = nr;
-      ssRound = nr;
-      if (document.getElementById('page-play').classList.contains('active')) renderPlayPage();
-      if (document.getElementById('page-scoresheet').classList.contains('active')) renderScoreSheet();
-    }
-  } else if (e.key === 'rr_obs_leaderboard') {
-    const on = e.newValue === '1';
-    if (on !== obsLeaderboardMode) {
-      obsLeaderboardMode = on;
-      if (document.getElementById('page-play').classList.contains('active')) renderPlayPage();
-      if (document.getElementById('page-scoresheet').classList.contains('active')) renderScoreSheet();
-    }
-  } else if (e.key === 'rr_obs_cycle') {
-    const on = e.newValue === '1';
-    if (on !== obsCycleMode) {
-      obsCycleMode = on;
-      if (document.getElementById('page-play').classList.contains('active')) renderPlayPage();
-      if (document.getElementById('page-scoresheet').classList.contains('active')) renderScoreSheet();
-    }
-  }
-});
-
 function renderScoreSheet() {
   if(!tournamentGenerated){
     document.getElementById('ss-content').innerHTML='<div class="alert">Please set up and generate the tournament first.</div>';
@@ -2972,11 +2820,9 @@ function renderScoreSheet() {
     const b = document.createElement('button');
     b.className = 'round-btn' + (r===ssRound?' active':'') + (isRoundComplete(r)&&r!==ssRound?' complete':'');
     b.textContent = r+1;
-    b.onclick=(()=>{const rr=r;return()=>selectSsRound(rr);})();
+    b.onclick=(()=>{const rr=r;return()=>{ssRound=rr;renderScoreSheet();};})();
     rb.appendChild(b);
   }
-  rb.appendChild(makeLbToggleBtn());
-  rb.appendChild(makeCycleToggleBtn());
 
   document.getElementById('ss-subtitle').textContent = `Round ${ssRound+1} of ${numRounds}`;
 
@@ -3610,8 +3456,6 @@ function saveState(){
     localStorage.setItem('rr_schedule', JSON.stringify(schedule));
     localStorage.setItem('rr_scores', JSON.stringify(scores));
     localStorage.setItem('rr_round', currentRound);
-    localStorage.setItem('rr_obs_leaderboard', obsLeaderboardMode?'1':'0');
-    localStorage.setItem('rr_obs_cycle', obsCycleMode?'1':'0');
     localStorage.setItem('rr_generated', tournamentGenerated?'1':'0');
     localStorage.setItem('rr_questions', numQuestions);
     localStorage.setItem('rr_ppq', pointsPerQuestion);
@@ -3649,9 +3493,6 @@ function loadState(){
     const s=localStorage.getItem('rr_schedule'); if(s) schedule=JSON.parse(s);
     const sc=localStorage.getItem('rr_scores'); if(sc) scores=JSON.parse(sc);
     const r=localStorage.getItem('rr_round'); if(r) currentRound=parseInt(r)||0;
-    ssRound=currentRound;
-    const lbm=localStorage.getItem('rr_obs_leaderboard'); if(lbm) obsLeaderboardMode=(lbm==='1');
-    const cyc=localStorage.getItem('rr_obs_cycle'); if(cyc) obsCycleMode=(cyc==='1');
     const g=localStorage.getItem('rr_generated'); if(g) tournamentGenerated=(g==='1');
     const q=localStorage.getItem('rr_questions'); if(q){ numQuestions=parseInt(q)||10; document.getElementById('num-questions').value=numQuestions; }
     const ppq=localStorage.getItem('rr_ppq'); if(ppq){ pointsPerQuestion=parseInt(ppq)||1; document.getElementById('num-ppq').value=pointsPerQuestion; }
@@ -3665,8 +3506,8 @@ function resetAll(){
   ghosts=Array(numPlayers).fill(false);
   dropouts=Array.from({length:numPlayers+4},()=>Array(numPlayers-1).fill(false));
   extras=[null,null,null,null];
-  schedule=[]; scores={}; currentRound=0; ssRound=0; obsLeaderboardMode=false; obsCycleMode=false; tournamentGenerated=false; numQuestions=10; pointsPerQuestion=1;
-  try{ ['rr_players','rr_ghosts','rr_dropouts','rr_extras','rr_schedule','rr_scores','rr_round','rr_obs_leaderboard','rr_obs_cycle','rr_generated','rr_questions','rr_ppq','rr_override'].forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  schedule=[]; scores={}; currentRound=0; tournamentGenerated=false; numQuestions=10; pointsPerQuestion=1;
+  try{ ['rr_players','rr_ghosts','rr_dropouts','rr_extras','rr_schedule','rr_scores','rr_round','rr_generated','rr_questions','rr_ppq','rr_override'].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   buildPlayerInputs();
   buildExtraPlayerInputs();
   document.getElementById('num-questions').value=10;
